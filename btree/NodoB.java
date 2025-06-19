@@ -28,9 +28,23 @@ public class NodoB<E extends Comparable<E>> {
         }
     }
 
-    //Verifica si el nodo está lleno
+    // Getters y setters
+    public ArrayList<E> getClaves() {
+        return keys;
+    }
+
+    public ArrayList<NodoB<E>> getHijos() {
+        return childs;
+    }
+
+    // Verifica si el nodo está lleno sin parámetro
     public boolean nodeFull() {
         return this.count == this.maxKeys;
+    }
+
+    // Verifica si el nodo está lleno con parámetro
+    public boolean nodeFull(int maxKeys) {
+        return this.count == maxKeys;
     }
 
     //Verifica si el nodo está vacío
@@ -43,8 +57,37 @@ public class NodoB<E extends Comparable<E>> {
         return this.childs.get(0) == null;
     }
 
+    //Verifica si es nodo hoja - sin hijos
+    public boolean esHoja() {
+        return isLeaf();
+    }
+
     //Busca una clave en el nodo. Retorna true si la encuentra, false si no.
     //Guarda en "pos" la posición de la clave o del hijo donde buscar
+
+    public boolean searchNode(E key, int[] pos) {
+        if (key == null) {
+            pos[0] = -1;
+            return false;
+        }
+
+        int i = 0;
+        //Recorre claves hasta encontrar posición correcta
+        while (i < this.count && key.compareTo(this.keys.get(i)) > 0) {
+            i++;
+        }
+
+        //Si se encuentra la clave exacta
+        if (i < this.count && key.compareTo(this.keys.get(i)) == 0) {
+            pos[0] = i;  // Posición de la clave encontrada
+            return true;
+        }
+
+        //Clave no encontrada, pos indica el hijo donde buscar
+        pos[0] = i;
+        return false;
+    }
+
     public boolean searchNode(E key) {
         if (key == null) {
             this.pos = -1;
@@ -66,6 +109,11 @@ public class NodoB<E extends Comparable<E>> {
         //Clave no encontrada, pos indica el hijo donde buscar
         this.pos = i;
         return false;
+    }
+
+    //Obtiene el ID único del nodo
+    public int getIdNode() {
+        return this.idNode;
     }
 
     //Obtiene la posición de la última búsqueda
@@ -101,29 +149,25 @@ public class NodoB<E extends Comparable<E>> {
         }
     }
 
-    //Convierte las claves del nodo a String
+    // Convierte las claves del nodo a String
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("[");
-
-        //Agrega cada clave separada por comas
+        sb.append("Nodo[").append(idNode).append("]: [");
         for (int i = 0; i < this.count; i++) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-            sb.append(this.keys.get(i).toString());
+            if (i > 0) sb.append(", ");
+            sb.append(this.keys.get(i));
         }
-
-        sb.append("]");
+        sb.append("] (").append(this.count).append(" claves)");
         return sb.toString();
     }
 
     //Muestra información detallada del nodo
-    public String toDetailedString() {
+    public String detalleNodo() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Nodo: ").append(toString());
+        sb.append(toString());
         sb.append(" (Número de  claves: ").append(this.count);
-        sb.append(", Hoja?: ").append(isLeaf()).append(")");
+        sb.append(", Es hoja?: ").append(isLeaf()).append(")");
         return sb.toString();
     }
 }
