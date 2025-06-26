@@ -2,178 +2,171 @@ package btreeFinal;
 
 import java.util.ArrayList;
 
-//Nodo de un árbol B genérico que maneja elementos comparables
 public class BNode<E extends Comparable<E>> {
     protected ArrayList<E> claves;
     protected ArrayList<BNode<E>> hijos;
     protected int contadorClaves;
-    protected int maximoClaves;
-    protected int maximoHijos;
-    protected int idNodo;
-    private static int idSiguiente = 1;
 
-    //Constructor que inicializa un nodo con el orden del arbol
+    //Inicializa nodo con capacidad según orden del árbol
     public BNode(int orden) {
-        this.claves = new ArrayList<>();
-        this.hijos = new ArrayList<>();
-        //Inicializa las listas con valores null según el orden
-        for (int i = 0; i < orden; i++) this.claves.add(null);
-        for (int i = 0; i <= orden; i++) this.hijos.add(null);
+        this.claves = new ArrayList<E>(orden);
+        this.hijos = new ArrayList<BNode<E>>(orden + 1); //Los hijos son orden + 1
         this.contadorClaves = 0;
-        this.maximoClaves = orden - 1;
-        this.maximoHijos = orden;
-        this.idNodo = idSiguiente++;
+        this.idNodo = 0;
+
+        //Inicializar listas con valores null para reservar espacio
+        for (int i = 0; i < orden - 1; i++) { //orden - 1 claves máximo
+            this.claves.add(null);
+        }
+        for (int i = 0; i < orden; i++) { //orden hijos máximo
+            this.hijos.add(null);
+        }
+
+        asignarId();
     }
 
-    //Calcula el número mínimo de claves requeridas según el orden
-    private int getMinimoClaves(int orden) {
-        return (orden % 2 == 0) ? (int)Math.ceil(orden / 2.0) - 1 : orden / 2;
-    }
-
-    //Verifica si el nodo está lleno
     public boolean nodeFull(int orden) {
         return this.contadorClaves == orden - 1;
     }
 
-    //Verifica si el nodo tiene menos claves del mínimo requerido
-    public boolean nodeEmpty(int orden) {
-        return this.contadorClaves < getMinimoClaves(orden);
+    public boolean nodeEmpty() {
+        return this.contadorClaves == 0;
     }
 
-    //Busca una clave en el nodo y retorna su posición
+    //Busca clave en nodo y retorna posición donde está o debería estar
     public boolean searchNode(E clave, int[] posicion) {
-        if (clave == null) {
-            posicion[0] = -1;
-            return false;
+        int i = 0;
+
+        //Buscar posición correcta comparando con claves existentes
+        while (i < this.contadorClaves && clave.compareTo(this.claves.get(i)) > 0) {
+            i++;
         }
 
-        posicion[0] = 0;
-        //Búsqueda secuencial hasta encontrar la posición correcta
-        while (posicion[0] < this.contadorClaves && claves.get(posicion[0]).compareTo(clave) < 0) {
-            posicion[0]++;
-        }
+        posicion[0] = i;
 
-        //Si llegamos al final, la clave no existe
-        if (posicion[0] == this.contadorClaves) {
-            return false;
+        //Verificar si clave fue encontrada exactamente
+        if (i < this.contadorClaves && clave.compareTo(this.claves.get(i)) == 0) {
+            return true; //Clave encontrada
+        } else {
+            return false; //Clave no encontrada, posicion indica donde buscar en hijos
         }
-
-        //Verifica si la clave en esa posición es igual a la buscada
-        return claves.get(posicion[0]).equals(clave);
     }
 
-    //Inserta una clave en el nodo manteniendo el orden
-    public boolean insertKey(E clave) {
-        if (clave == null || this.contadorClaves >= this.maximoClaves) {
-            return false;
-        }
-
-        int[] posicion = new int[1];
-        //No permite claves duplicadas
-        if (searchNode(clave, posicion)) {
-            return false;
-        }
-
-        //Agrega espacio para la nueva clave
-        this.claves.add(null);
-        //Desplaza las claves mayores hacia la derecha
-        for (int i = this.contadorClaves; i > posicion[0]; i--) {
-            claves.set(i, claves.get(i - 1));
-        }
-        //Inserta la nueva clave en su posición correcta
-        claves.set(posicion[0], clave);
-        this.contadorClaves++;
-        return true;
-    }
-
-    //Elimina una clave del nodo y retorna su posición anterior
-    public int removeKey(E clave) {
-        if (clave == null) {
-            return -1;
-        }
-
-        int indice = claves.indexOf(clave);
-        if (indice == -1) {
-            return -1;
-        }
-
-        //Desplaza las claves hacia la izquierda para llenar el hueco
-        for (int i = indice; i < contadorClaves - 1; i++) {
-            claves.set(i, claves.get(i + 1));
-        }
-        //Limpia la última posición
-        claves.set(contadorClaves - 1, null);
-        contadorClaves--;
-        return indice;
-    }
-
-    //Obtiene la clave en la posición especificada
-    public E getKey(int indice) {
-        if (indice >= 0 && indice < this.contadorClaves) {
-            return this.claves.get(indice);
+    public E getKey(int index) {
+        if (index >= 0 && index < this.contadorClaves) {
+            return this.claves.get(index);
         }
         return null;
     }
 
-    //Obtiene el nodo hijo en la posición especificada
-    public BNode<E> getChild(int indice) {
-        if (indice >= 0 && indice < this.hijos.size()) {
-            return this.hijos.get(indice);
+    public BNode<E> getChild(int index) {
+        if (index >= 0 && index < this.hijos.size()) {
+            return this.hijos.get(index);
         }
         return null;
     }
 
-    //Establece un nodo hijo en la posición especificada
-    public void setChild(int indice, BNode<E> nodoHijo) {
-        if (indice >= 0 && indice < this.hijos.size()) {
-            this.hijos.set(indice, nodoHijo);
-        } else if (indice == this.hijos.size() && indice < this.maximoHijos) {
-            this.hijos.add(nodoHijo);
+    //Asigna hijo en posición específica expandiendo lista si es necesario
+    public void setChild(int index, BNode<E> child) {
+        //Expandir ArrayList si no tiene suficiente capacidad
+        while (this.hijos.size() <= index) {
+            this.hijos.add(null);
         }
+        this.hijos.set(index, child);
     }
 
-    //Retorna el número actual de claves en el nodo
-    public int getCount() {
-        return this.contadorClaves;
-    }
+    //Elimina clave específica del nodo desplazando elementos restantes
+    public void removeKey(E clave) {
+        int posicion = -1;
 
-    //Retorna el identificador único del nodo
-    public int getIdNode() {
-        return this.idNodo;
-    }
-
-    //Genera una cadena con todas las claves del nodo separadas por comas
-    private String getClavesCadena() {
-        StringBuilder resultado = new StringBuilder();
+        //Localizar posición de la clave a eliminar
         for (int i = 0; i < this.contadorClaves; i++) {
-            resultado.append(this.claves.get(i));
-            if (i < this.contadorClaves - 1) {
-                resultado.append(", ");
+            if (this.claves.get(i).compareTo(clave) == 0) {
+                posicion = i;
+                break;
             }
         }
-        return resultado.toString();
+
+        if (posicion != -1) {
+            //Desplazar claves hacia la izquierda para llenar hueco
+            for (int i = posicion; i < this.contadorClaves - 1; i++) {
+                this.claves.set(i, this.claves.get(i + 1));
+            }
+            this.contadorClaves--;
+        }
     }
 
-    //Representación en cadena del nodo mostrando ID y claves
+    //Inserta clave manteniendo orden ascendente
+    public void insertKey(E clave) {
+        int posicion = 0;
+
+        //Encontrar posición de inserción manteniendo orden
+        while (posicion < this.contadorClaves && clave.compareTo(this.claves.get(posicion)) > 0) {
+            posicion++;
+        }
+
+        //Desplazar claves hacia la derecha para hacer espacio
+        for (int i = this.contadorClaves; i > posicion; i--) {
+            if (this.claves.size() <= i) {
+                this.claves.add(null);
+            }
+            this.claves.set(i, this.claves.get(i - 1));
+        }
+
+        //Insertar nueva clave en posición correcta
+        if (this.claves.size() <= posicion) {
+            this.claves.add(null);
+        }
+        this.claves.set(posicion, clave);
+        this.contadorClaves++;
+    }
+
+    //Cuenta hijos no nulos del nodo
+    public int getChildCount() {
+        int count = 0;
+        for (int i = 0; i <= this.contadorClaves; i++) {
+            if (this.getChild(i) != null) {
+                count = i + 1;
+            }
+        }
+        return count;
+    }
+
+    //Sistema de identificación única para nodos
+    private static int contadorId = 0;
+    private int idNodo;
+
+    public static void reiniciarContadorId() {
+        contadorId = 0;
+    }
+
+    //Asigna ID único incremental al crear nodo
+    private void asignarId() {
+        this.idNodo = ++contadorId;
+    }
+
+    //Retorna ID formateado para visualización del árbol
+    public String getIdNode() {
+        if (this.idNodo == 0) {
+            asignarId();
+        }
+        return String.format("%02d", this.idNodo);
+    }
+
+    //Representación en cadena de las claves del nodo
     @Override
     public String toString() {
-        StringBuilder resultado = new StringBuilder();
-        resultado.append("Nodo[").append(idNodo).append("]: (");
-        resultado.append(getClavesCadena());
-        resultado.append(")");
-        return resultado.toString();
-    }
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
 
-    //Verifica si el nodo es una hoja revisando si todos los hijos son null
-    public boolean isLeaf() {
-        for (int i = 0; i < hijos.size(); i++) {
-            if (hijos.get(i) != null) return false;
+        for (int i = 0; i < this.contadorClaves; i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            sb.append(this.claves.get(i));
         }
-        return true;
-    }
 
-    //Retorna el número total de posiciones para hijos
-    public int getChildCount() {
-        return this.hijos.size();
+        sb.append("]");
+        return sb.toString();
     }
 }

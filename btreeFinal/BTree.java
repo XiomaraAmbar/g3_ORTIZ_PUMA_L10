@@ -1,47 +1,54 @@
 package btreeFinal;
 
-import java.util.ArrayList;
+import LinkedList.Cola;
+import LinkedList.MensajeException;
 
-//Clase que implementa un árbol B completo con operaciones de inserción, búsqueda y eliminación
 public class BTree<E extends Comparable<E>> {
-    private BNode<E> raiz; //Nodo raíz del árbol B
-    private int orden; //Orden del árbol B
-    private boolean dividido; //Booleano que indica si se realizó una división durante la inserción
-    private BNode<E> derechoTemporal; //Nodo temporal usado durante las divisiones
-    private int minimoClaves; //Número mínimo de claves que debe tener un nodo
+    private BNode<E> raiz;
+    private int orden;
+    private boolean dividido; //Controla si se realizó división durante inserción
+    private BNode<E> derechoTemporal; //Almacena nodo derecho resultante de división
+    private int minimoClaves; //Número mínimo de claves por nodo
 
-    //Constructor que inicializa el árbol B con el orden del arbol
-    public BTree(int orden){
+    //Inicializa árbol B con orden especificado
+    public BTree(int orden) {
         this.orden = orden;
         this.raiz = null;
-        minimoClaves = (int)Math.ceil(orden / 2.0) - 1;
+        minimoClaves = (int) Math.ceil(orden / 2.0) - 1;
     }
 
-    //Verifica si el árbol está vacío
-    public boolean isEmpty(){
+    public boolean isEmpty() {
         return this.raiz == null;
     }
 
-    //Método público para insertar una nueva clave en el árbol
+    /************************************************************************************
+     * MÉTODOS DE INSERCIÓN
+     ************************************************************************************/
+
+    //Inserta nueva clave manejando división de raíz si es necesario
     public void insert(E nuevaClave){
         dividido = false;
         E claveMedia;
-        BNode<E> nuevaRaiz; //Nuevo nodo padre o nodo creado con la clave del medio
+        BNode<E> nuevaRaiz;
         claveMedia = push(this.raiz,nuevaClave);
+
+        //Si hubo división, crear nueva raíz
         if(dividido){
             nuevaRaiz = new BNode<E>(this.orden);
             nuevaRaiz.contadorClaves = 1;
-            nuevaRaiz.insertKey(claveMedia);
+            nuevaRaiz.claves.set(0,claveMedia);
             nuevaRaiz.setChild(0, this.raiz);
             nuevaRaiz.setChild(1, derechoTemporal);
             this.raiz = nuevaRaiz;
         }
     }
 
-    //Método recursivo que inserta una clave y maneja las divisiones de nodos
+    //Inserta recursivamente y propaga divisiones hacia arriba
     private E push(BNode<E> nodoActual, E nuevaClave){
         int posicion[] = new int[1];
         E claveMedia;
+
+        //Caso base: nodo nulo, insertar aquí
         if(nodoActual == null){
             dividido = true;
             derechoTemporal = null;
@@ -51,12 +58,17 @@ public class BTree<E extends Comparable<E>> {
             boolean claveEncontrada;
             claveEncontrada = nodoActual.searchNode(nuevaClave, posicion);
 
+            //No permitir duplicados
             if(claveEncontrada){
                 System.out.println("Item duplicado\n");
                 dividido = false;
                 return null;
             }
+
+            //Insertar recursivamente en hijo apropiado
             claveMedia = push(nodoActual.getChild(posicion[0]),nuevaClave);
+
+            //Manejar división propagada desde hijo
             if(dividido){
                 if(nodoActual.nodeFull(this.orden))
                     claveMedia = dividedNode(nodoActual,claveMedia,posicion[0]);
@@ -69,144 +81,95 @@ public class BTree<E extends Comparable<E>> {
         }
     }
 
-    //Inserta una clave y su hijo derecho en un nodo que no está lleno
+    //Inserta clave e hijo en nodo con espacio disponible
     private void putNode(BNode<E> nodoActual, E nuevaClave, BNode<E> nuevoDerecho, int posicionInsertar){
-        try {
-            //Crea un nodo temporal para reorganizar elementos
-            BNode<E> nodoTemporal = new BNode<E>(this.orden);
-
-            //Copia claves hasta la posición de inserción
-            for (int i = 0; i < posicionInsertar; i++) {
-                nodoTemporal.insertKey(nodoActual.getKey(i));
+        int i;
+        //Desplazar claves hacia la derecha
+        for (i = nodoActual.contadorClaves - 1; i >= posicionInsertar; i--) {
+            if (nodoActual.claves.size() <= i + 1) {
+                nodoActual.claves.add(null);
             }
-
-            //Inserta la nueva clave
-            nodoTemporal.insertKey(nuevaClave);
-
-            //Copia el resto de claves
-            for (int i = posicionInsertar; i < nodoActual.contadorClaves; i++) {
-                nodoTemporal.insertKey(nodoActual.getKey(i));
-            }
-
-            //Reorganiza los hijos
-            for (int i = 0; i <= posicionInsertar; i++) {
-                nodoTemporal.setChild(i, nodoActual.getChild(i));
-            }
-            nodoTemporal.setChild(posicionInsertar + 1, nuevoDerecho);
-            for (int i = posicionInsertar + 1; i <= nodoActual.contadorClaves; i++) {
-                nodoTemporal.setChild(i + 1, nodoActual.getChild(i));
-            }
-
-            //Copia de vuelta al nodo original
-            nodoActual.claves = nodoTemporal.claves;
-            nodoActual.hijos = nodoTemporal.hijos;
-            nodoActual.contadorClaves = nodoTemporal.contadorClaves;
-
-        } catch (Exception e) {
-            System.err.println("Error en putNode: " + e.getMessage());
+            nodoActual.claves.set(i + 1, nodoActual.getKey(i));
         }
+
+        //Desplazar hijos hacia la derecha
+        for (i = nodoActual.contadorClaves; i >= posicionInsertar + 1; i--) {
+            nodoActual.setChild(i + 1, nodoActual.getChild(i));
+        }
+
+        //Insertar nueva clave e hijo en posición correcta
+        if (nodoActual.claves.size() <= posicionInsertar) {
+            nodoActual.claves.add(null);
+        }
+        nodoActual.claves.set(posicionInsertar, nuevaClave);
+        nodoActual.setChild(posicionInsertar + 1, nuevoDerecho);
+        nodoActual.contadorClaves++;
     }
 
-    //Divide un nodo lleno en dos nodos y devuelve la clave mediana
+    //Divide nodo lleno y retorna clave mediana
     private E dividedNode(BNode<E> nodoActual, E nuevaClave, int posicionInsertar){
         BNode<E> nuevoDerecho = derechoTemporal;
-        int posicionMediana;
+        int i, posicionMediana;
+
+        //Calcular posición de la mediana
         posicionMediana = (posicionInsertar <= this.orden/2) ? this.orden/2 : this.orden/2+1;
         derechoTemporal = new BNode<E>(this.orden);
 
-        try {
-            //Crea nodo temporal con todas las claves (incluyendo la nueva)
-            BNode<E> nodoTemporal = new BNode<E>(this.orden);
-
-            //Copia claves hasta la posición de inserción
-            for (int i = 0; i < posicionInsertar; i++) {
-                nodoTemporal.insertKey(nodoActual.getKey(i));
-            }
-            //Inserta la nueva clave
-            nodoTemporal.insertKey(nuevaClave);
-            //Copia el resto de claves
-            for (int i = posicionInsertar; i < nodoActual.contadorClaves; i++) {
-                nodoTemporal.insertKey(nodoActual.getKey(i));
-            }
-
-            //Copia hijos al nodo temporal
-            for (int i = 0; i <= posicionInsertar; i++) {
-                nodoTemporal.setChild(i, nodoActual.getChild(i));
-            }
-            nodoTemporal.setChild(posicionInsertar + 1, nuevoDerecho);
-            for (int i = posicionInsertar + 1; i <= nodoActual.contadorClaves; i++) {
-                nodoTemporal.setChild(i + 1, nodoActual.getChild(i));
-            }
-            //Obtiene la mediana
-            E median = nodoTemporal.getKey(posicionMediana);
-
-            //Limpia el nodo actual
-            nodoActual.claves = new ArrayList<>();
-            nodoActual.hijos = new ArrayList<>();
-            nodoActual.contadorClaves = 0;
-
-            //Llena la mitad izquierda (nodo actual)
-            for (int i = 0; i < posicionMediana; i++) {
-                nodoActual.insertKey(nodoTemporal.getKey(i));
-                nodoActual.setChild(i, nodoTemporal.getChild(i));
-            }
-            nodoActual.setChild(posicionMediana, nodoTemporal.getChild(posicionMediana));
-
-            //Llena la mitad derecha (nuevo nodo)
-            for (int i = posicionMediana + 1; i < nodoTemporal.contadorClaves; i++) {
-                derechoTemporal.insertKey(nodoTemporal.getKey(i));
-                derechoTemporal.setChild(i - posicionMediana - 1, nodoTemporal.getChild(i));
-            }
-            derechoTemporal.setChild(nodoTemporal.contadorClaves - posicionMediana - 1, nodoTemporal.getChild(nodoTemporal.contadorClaves));
-
-            return median;
-
-        } catch (Exception e) {
-            System.err.println("Error en dividedNode: " + e.getMessage());
-            return null;
+        //Mover mitad superior de claves e hijos al nuevo nodo
+        for (i = posicionMediana; i < this.orden - 1; i++) {
+            derechoTemporal.claves.set(i - posicionMediana, nodoActual.claves.get(i));
+            derechoTemporal.hijos.set(i - posicionMediana + 1, nodoActual.hijos.get(i+1));
         }
+
+        derechoTemporal.contadorClaves = (this.orden - 1) - posicionMediana;
+        nodoActual.contadorClaves = posicionMediana;
+
+        //Insertar nueva clave en el nodo apropiado
+        if (posicionInsertar <= this.orden / 2) {
+            putNode(nodoActual, nuevaClave, nuevoDerecho, posicionInsertar);
+        } else {
+            putNode(derechoTemporal, nuevaClave, nuevoDerecho, posicionInsertar - posicionMediana);
+        }
+
+        //Extraer y retornar clave mediana
+        E claveMediana = nodoActual.claves.get(nodoActual.contadorClaves - 1);
+        derechoTemporal.hijos.set(0, nodoActual.hijos.get(nodoActual.contadorClaves));
+        nodoActual.contadorClaves--;
+
+        return claveMediana;
     }
 
-    //Método público para buscar una clave en el árbol
+    /************************************************************************************
+     * MÉTODOS DE BÚSQUEDA
+     ************************************************************************************/
+
     public boolean search(E clave) {
-        if (isEmpty()) {
+        if (isEmpty() || clave == null) {
             return false;
+        }
+        return searchKey(this.raiz, clave);
+    }
+
+    //Busca clave recursivamente en el árbol
+    private boolean searchKey(BNode<E> nodoActual, E clave) {
+        if (nodoActual == null) {
+            return false;
+        }
+
+        int[] posicion = new int[1];
+        boolean encontrado = nodoActual.searchNode(clave, posicion);
+
+        if (encontrado) {
+            return true;
         } else {
-            ResultadoBusqueda resultado = searchKey(this.raiz, clave);
-            if (resultado.encontrado) {
-                System.out.println(clave + " se encuentra en una posición del nodo " + resultado.posicionNodo);
-            }
-            return resultado.encontrado;
+            return searchKey(nodoActual.getChild(posicion[0]), clave);
         }
     }
 
-    //Método recursivo que busca una clave en el árbol
-    private ResultadoBusqueda searchKey(BNode<E> nodoActual, E clave) {
-        int pos = 0;
-        while (pos < nodoActual.contadorClaves && nodoActual.getKey(pos).compareTo(clave) < 0) {
-            pos++;
-        }
-        if (pos < nodoActual.contadorClaves && nodoActual.getKey(pos).equals(clave)) {
-            return new ResultadoBusqueda(true, pos);
-        } else if (nodoActual.getChild(pos) != null) {
-            return searchKey(nodoActual.getChild(pos), clave);
-        } else {
-            return new ResultadoBusqueda(false, -1);
-        }
-    }
+    /************************************************************************************
+     * MÉTODOS DE ELIMINACIÓN
+     ************************************************************************************/
 
-    //Clase interna para almacenar el resultado de una búsqueda
-    private static class ResultadoBusqueda {
-        boolean encontrado; //Indica si la clave fue encontrada
-        int posicionNodo; //Posición de la clave en el nodo
-
-        public ResultadoBusqueda(boolean encontrado, int posicionNodo) {
-            this.encontrado = encontrado;
-            this.posicionNodo = posicionNodo;
-        }
-    }
-
-    //Método público para eliminar una clave del árbol
     public void remove(E clave) {
         if (isEmpty()) {
             System.out.println("El árbol está vacío. No se puede eliminar la clave.");
@@ -214,10 +177,10 @@ public class BTree<E extends Comparable<E>> {
         }
 
         boolean eliminado = removeKey(this.raiz, clave);
+
         if (eliminado) {
             System.out.println("Se eliminó la clave " + clave + " del árbol.");
-
-            //Si la raíz queda vacía después de la eliminación, ajustar la raíz
+            //Ajustar raíz si quedó vacía
             if (this.raiz.contadorClaves == 0 && this.raiz.getChild(0) != null) {
                 this.raiz = this.raiz.getChild(0);
             }
@@ -226,149 +189,234 @@ public class BTree<E extends Comparable<E>> {
         }
     }
 
-    //Método recursivo que elimina una clave del árbol
+    //Elimina clave recursivamente manejando underflow
     private boolean removeKey(BNode<E> nodoActual, E clave) {
-        int posicion[] = new int[1];
+        if (nodoActual == null) {
+            return false;
+        }
+
+        int[] posicion = new int[1];
         boolean encontrado = nodoActual.searchNode(clave, posicion);
 
-        //Si se encuentra la clave en el nodo actual
         if (encontrado) {
-            //Si es un nodo hoja
-            if (nodoActual.getChild(posicion[0]) == null) {
-                //Eliminar directamente usando el método de BNode
+            //Clave encontrada en nodo actual
+            if (nodoActual.getChild(0) == null) {
+                //Nodo hoja: eliminar directamente
                 nodoActual.removeKey(clave);
                 return true;
             } else {
-                //Si no es hoja, reemplazar con el sucesor
-                BNode<E> nodoSucesor = nodoActual.getChild(posicion[0] + 1);
-                while (nodoSucesor.getChild(0) != null) {
-                    nodoSucesor = nodoSucesor.getChild(0);
-                }
-                E claveSucesor = nodoSucesor.getKey(0);
-
-                //Reemplazar la clave en el nodo actual
-                nodoActual.removeKey(clave);
-                nodoActual.insertKey(claveSucesor);
-
-                //Eliminar el sucesor del subárbol derecho
-                boolean success = removeKey(nodoActual.getChild(posicion[0] + 1), claveSucesor);
-
-                //Verificar underflow en el hijo derecho
-                if (success && nodoActual.getChild(posicion[0] + 1).contadorClaves < minimoClaves) {
-                    fixUnderflow(nodoActual, posicion[0] + 1);
-                }
-                return encontrado;
+                //Nodo interno: reemplazar con sucesor/predecesor
+                return removeFromInternalNode(nodoActual, clave, posicion[0]);
             }
-        }
-        //Si la clave no se encuentra en el nodo actual, buscar en el hijo correspondiente
-        else if (nodoActual.getChild(posicion[0]) != null) {
-            encontrado = removeKey(nodoActual.getChild(posicion[0]), clave);
+        } else {
+            //Buscar en hijo correspondiente
+            boolean eliminado = removeKey(nodoActual.getChild(posicion[0]), clave);
 
-            //Verificar underflow en el hijo
-            if (encontrado && nodoActual.getChild(posicion[0]).contadorClaves < minimoClaves) {
+            //Verificar y corregir underflow en hijo
+            if (eliminado && nodoActual.getChild(posicion[0]) != null &&
+                    nodoActual.getChild(posicion[0]).contadorClaves < minimoClaves) {
                 fixUnderflow(nodoActual, posicion[0]);
             }
-            return encontrado;
-        }
-        //Si no se encuentra la clave
-        else {
-            return false;
+
+            return eliminado;
         }
     }
 
-    //Corrige el underflow (déficit de claves) en un nodo
+    //Elimina clave de nodo interno usando sucesor o predecesor
+    private boolean removeFromInternalNode(BNode<E> nodoActual, E clave, int posicionClave) {
+        BNode<E> hijoIzquierdo = nodoActual.getChild(posicionClave);
+        BNode<E> hijoDerecho = nodoActual.getChild(posicionClave + 1);
+
+        //Intentar usar sucesor del subárbol derecho
+        if (hijoDerecho != null && hijoDerecho.contadorClaves >= minimoClaves) {
+            E sucesor = getMinKey(hijoDerecho);
+            nodoActual.removeKey(clave);
+            nodoActual.insertKey(sucesor);
+
+            boolean eliminado = removeKey(hijoDerecho, sucesor);
+            if (eliminado && hijoDerecho.contadorClaves < minimoClaves) {
+                fixUnderflow(nodoActual, posicionClave + 1);
+            }
+            return true;
+        }
+        //Intentar usar predecesor del subárbol izquierdo
+        else if (hijoIzquierdo != null && hijoIzquierdo.contadorClaves >= minimoClaves) {
+            E predecesor = getMaxKey(hijoIzquierdo);
+            nodoActual.removeKey(clave);
+            nodoActual.insertKey(predecesor);
+
+            boolean eliminado = removeKey(hijoIzquierdo, predecesor);
+            if (eliminado && hijoIzquierdo.contadorClaves < minimoClaves) {
+                fixUnderflow(nodoActual, posicionClave);
+            }
+            return true;
+        }
+        //Fusionar hijos si ambos tienen mínimo de claves
+        else {
+            if (hijoIzquierdo != null && hijoDerecho != null) {
+                mergeNodes(hijoIzquierdo, clave, hijoDerecho);
+                nodoActual.removeKey(clave);
+
+                //Reorganizar hijos del padre
+                for (int i = posicionClave + 1; i <= nodoActual.contadorClaves; i++) {
+                    nodoActual.setChild(i, nodoActual.getChild(i + 1));
+                }
+
+                return removeKey(hijoIzquierdo, clave);
+            }
+        }
+
+        return false;
+    }
+
+    //Encuentra clave mínima navegando al hijo más izquierdo
+    private E getMinKey(BNode<E> nodo) {
+        while (nodo.getChild(0) != null) {
+            nodo = nodo.getChild(0);
+        }
+        return nodo.getKey(0);
+    }
+
+    //Encuentra clave máxima navegando al hijo más derecho
+    private E getMaxKey(BNode<E> nodo) {
+        while (nodo.getChild(nodo.contadorClaves) != null) {
+            nodo = nodo.getChild(nodo.contadorClaves);
+        }
+        return nodo.getKey(nodo.contadorClaves - 1);
+    }
+
+    //Corrige underflow mediante préstamo o fusión
     private void fixUnderflow(BNode<E> nodoPadre, int indiceHijo) {
         BNode<E> hijoDesbalanceado = nodoPadre.getChild(indiceHijo);
+
+        if (hijoDesbalanceado == null) {
+            return;
+        }
+
         BNode<E> hermanoIzquierdo = (indiceHijo > 0) ? nodoPadre.getChild(indiceHijo - 1) : null;
         BNode<E> hermanoDerecho = (indiceHijo < nodoPadre.contadorClaves) ? nodoPadre.getChild(indiceHijo + 1) : null;
 
-        //1. Intentar obtener una clave prestada del hermano DERECHO primero
+        //Intentar préstamo de hermano derecho
         if (hermanoDerecho != null && hermanoDerecho.contadorClaves > minimoClaves) {
-            //Bajar clave del padre al hijo con underflow
-            E clavePadre = nodoPadre.getKey(indiceHijo);
-            hijoDesbalanceado.insertKey(clavePadre);
-            hijoDesbalanceado.setChild(hijoDesbalanceado.contadorClaves, hermanoDerecho.getChild(0));
-
-            //Subir la primera clave del hermano derecho al padre
-            E primeraClave = hermanoDerecho.getKey(0);
-            nodoPadre.removeKey(clavePadre);
-            nodoPadre.insertKey(primeraClave);
-
-            //Eliminar la primera clave del hermano derecho
-            hermanoDerecho.removeKey(primeraClave);
-
-            //Reorganizar hijos del hermano derecho
-            for (int i = 0; i < hermanoDerecho.contadorClaves; i++) {
-                hermanoDerecho.setChild(i, hermanoDerecho.getChild(i + 1));
-            }
+            borrowFromRight(nodoPadre, indiceHijo);
         }
-        //2. Intentar obtener una clave prestada del hermano IZQUIERDO
+        //Intentar préstamo de hermano izquierdo
         else if (hermanoIzquierdo != null && hermanoIzquierdo.contadorClaves > minimoClaves) {
-            //Bajar clave del padre al hijo con underflow
-            E clavePadre = nodoPadre.getKey(indiceHijo - 1);
-
-            //Crear nodo temporal para reorganizar
-            BNode<E> nodoTemporal = new BNode<E>(this.orden);
-            nodoTemporal.insertKey(clavePadre);
-            for (int i = 0; i < hijoDesbalanceado.contadorClaves; i++) {
-                nodoTemporal.insertKey(hijoDesbalanceado.getKey(i));
-            }
-
-            //Reorganizar hijos
-            nodoTemporal.setChild(0, hermanoIzquierdo.getChild(hermanoIzquierdo.contadorClaves));
-            for (int i = 0; i <= hijoDesbalanceado.contadorClaves; i++) {
-                nodoTemporal.setChild(i + 1, hijoDesbalanceado.getChild(i));
-            }
-
-            //Subir la última clave del hermano izquierdo al padre
-            E ultimaClave = hermanoIzquierdo.getKey(hermanoIzquierdo.contadorClaves - 1);
-            nodoPadre.removeKey(clavePadre);
-            nodoPadre.insertKey(ultimaClave);
-
-            //Actualizar el hijo
-            hijoDesbalanceado.claves = nodoTemporal.claves;
-            hijoDesbalanceado.hijos = nodoTemporal.hijos;
-            hijoDesbalanceado.contadorClaves = nodoTemporal.contadorClaves;
-
-            //Eliminar la última clave del hermano izquierdo
-            hermanoIzquierdo.removeKey(ultimaClave);
+            borrowFromLeft(nodoPadre, indiceHijo);
         }
-        //3. Si no es posible préstamo, realizar fusión
+        //Fusionar con hermano disponible
         else {
-            //Fusión con hermano DERECHO (preferencia)
             if (hermanoDerecho != null) {
-                mergeNodes(hijoDesbalanceado, nodoPadre.getKey(indiceHijo), hermanoDerecho);
-                nodoPadre.removeKey(nodoPadre.getKey(indiceHijo));
-
-                //Reorganizar hijos del padre
-                for (int i = indiceHijo + 1; i < nodoPadre.contadorClaves; i++) {
-                    nodoPadre.setChild(i, nodoPadre.getChild(i + 1));
-                }
-            }
-            //Fusión con hermano IZQUIERDO
-            else if (hermanoIzquierdo != null) {
-                mergeNodes(hermanoIzquierdo, nodoPadre.getKey(indiceHijo - 1), hijoDesbalanceado);
-                nodoPadre.removeKey(nodoPadre.getKey(indiceHijo - 1));
-
-                //Reorganizar hijos del padre
-                for (int i = indiceHijo; i < nodoPadre.contadorClaves; i++) {
-                    nodoPadre.setChild(i, nodoPadre.getChild(i + 1));
-                }
+                mergeWithRight(nodoPadre, indiceHijo);
+            } else if (hermanoIzquierdo != null) {
+                mergeWithLeft(nodoPadre, indiceHijo);
             }
         }
     }
 
-    //Fusiona dos nodos hermanos con una clave del padre
+    //Toma clave prestada del hermano derecho
+    private void borrowFromRight(BNode<E> nodoPadre, int indiceHijo) {
+        BNode<E> hijoDesbalanceado = nodoPadre.getChild(indiceHijo);
+        BNode<E> hermanoDerecho = nodoPadre.getChild(indiceHijo + 1);
+
+        //Bajar clave del padre e insertar primer hijo del hermano
+        E clavePadre = nodoPadre.getKey(indiceHijo);
+        hijoDesbalanceado.insertKey(clavePadre);
+
+        if (hermanoDerecho.getChild(0) != null) {
+            hijoDesbalanceado.setChild(hijoDesbalanceado.contadorClaves, hermanoDerecho.getChild(0));
+        }
+
+        //Subir primera clave del hermano al padre
+        E primeraClave = hermanoDerecho.getKey(0);
+        nodoPadre.removeKey(clavePadre);
+        nodoPadre.insertKey(primeraClave);
+
+        hermanoDerecho.removeKey(primeraClave);
+
+        //Reorganizar hijos del hermano derecho
+        for (int i = 0; i <= hermanoDerecho.contadorClaves; i++) {
+            hermanoDerecho.setChild(i, hermanoDerecho.getChild(i + 1));
+        }
+    }
+
+    //Toma clave prestada del hermano izquierdo
+    private void borrowFromLeft(BNode<E> nodoPadre, int indiceHijo) {
+        BNode<E> hijoDesbalanceado = nodoPadre.getChild(indiceHijo);
+        BNode<E> hermanoIzquierdo = nodoPadre.getChild(indiceHijo - 1);
+
+        E clavePadre = nodoPadre.getKey(indiceHijo - 1);
+
+        //Desplazar claves del hijo desbalanceado hacia la derecha
+        for (int i = hijoDesbalanceado.contadorClaves; i > 0; i--) {
+            if (hijoDesbalanceado.claves.size() <= i) {
+                hijoDesbalanceado.claves.add(null);
+            }
+            hijoDesbalanceado.claves.set(i, hijoDesbalanceado.getKey(i - 1));
+        }
+
+        //Insertar clave del padre en primera posición
+        hijoDesbalanceado.claves.set(0, clavePadre);
+        hijoDesbalanceado.contadorClaves++;
+
+        //Desplazar hijos hacia la derecha
+        for (int i = hijoDesbalanceado.contadorClaves; i > 0; i--) {
+            hijoDesbalanceado.setChild(i, hijoDesbalanceado.getChild(i - 1));
+        }
+
+        //Mover último hijo del hermano izquierdo
+        if (hermanoIzquierdo.getChild(hermanoIzquierdo.contadorClaves) != null) {
+            hijoDesbalanceado.setChild(0, hermanoIzquierdo.getChild(hermanoIzquierdo.contadorClaves));
+        }
+
+        //Subir última clave del hermano izquierdo al padre
+        E ultimaClave = hermanoIzquierdo.getKey(hermanoIzquierdo.contadorClaves - 1);
+        nodoPadre.removeKey(clavePadre);
+        nodoPadre.insertKey(ultimaClave);
+
+        hermanoIzquierdo.removeKey(ultimaClave);
+        hermanoIzquierdo.setChild(hermanoIzquierdo.contadorClaves + 1, null);
+    }
+
+    private void mergeWithRight(BNode<E> nodoPadre, int indiceHijo) {
+        BNode<E> hijoIzquierdo = nodoPadre.getChild(indiceHijo);
+        BNode<E> hijoDerecho = nodoPadre.getChild(indiceHijo + 1);
+        E clavePadre = nodoPadre.getKey(indiceHijo);
+
+        mergeNodes(hijoIzquierdo, clavePadre, hijoDerecho);
+        nodoPadre.removeKey(clavePadre);
+
+        //Reorganizar referencias de hijos
+        for (int i = indiceHijo + 1; i <= nodoPadre.contadorClaves; i++) {
+            nodoPadre.setChild(i, nodoPadre.getChild(i + 1));
+        }
+    }
+
+    private void mergeWithLeft(BNode<E> nodoPadre, int indiceHijo) {
+        BNode<E> hermanoIzquierdo = nodoPadre.getChild(indiceHijo - 1);
+        BNode<E> hijoDesbalanceado = nodoPadre.getChild(indiceHijo);
+        E clavePadre = nodoPadre.getKey(indiceHijo - 1);
+
+        mergeNodes(hermanoIzquierdo, clavePadre, hijoDesbalanceado);
+        nodoPadre.removeKey(clavePadre);
+
+        //Reorganizar referencias de hijos
+        for (int i = indiceHijo; i <= nodoPadre.contadorClaves; i++) {
+            nodoPadre.setChild(i, nodoPadre.getChild(i + 1));
+        }
+    }
+
+    //Combina dos nodos hermanos con clave del padre
     private void mergeNodes(BNode<E> hermanoIzquierdo, E clavePadre, BNode<E> hermanoDerecho) {
-        //Agregar la clave del padre al nodo izquierdo
+        //Agregar clave del padre al nodo izquierdo
         hermanoIzquierdo.insertKey(clavePadre);
 
-        //Agregar todas las claves del nodo derecho al izquierdo
+        //Transferir todas las claves del nodo derecho
         for (int i = 0; i < hermanoDerecho.contadorClaves; i++) {
             hermanoIzquierdo.insertKey(hermanoDerecho.getKey(i));
         }
 
-        //Agregar todos los hijos del nodo derecho al izquierdo
+        //Transferir todos los hijos del nodo derecho
         for (int i = 0; i <= hermanoDerecho.contadorClaves; i++) {
             if (hermanoDerecho.getChild(i) != null) {
                 hermanoIzquierdo.setChild(hermanoIzquierdo.getChildCount(), hermanoDerecho.getChild(i));
@@ -376,69 +424,86 @@ public class BTree<E extends Comparable<E>> {
         }
     }
 
-    //Representación en cadena del árbol completo
+    /************************************************************************************
+     * REPRESENTACIÓN ARBOL EN CADENA
+     ************************************************************************************/
+
     public String toString() {
         StringBuilder s = new StringBuilder();
         if (isEmpty()) {
             s.append("BTree esta vacío...");
         } else {
-            writeTree(this.raiz, null, s);
+            writeTree(this.raiz, s);
         }
         return s.toString();
     }
 
-    //Método recursivo que construye la representación tabular del árbol
-    private StringBuilder writeTree(BNode<E> nodoActual, BNode<E> nodoPadre, StringBuilder resultado) {
-        if (nodoActual != null) {
-            //Si es el primer nodo (raíz), agregar encabezados
-            if (nodoPadre == null && resultado.length() == 0) {
-                resultado.append(String.format("%-10s %-15s %-10s %-15s%n",
-                        "Id.Nodo", "Claves Nodo", "Id.Padre", "Id.Hijos"));
-            }
+    //Genera representación tabular usando recorrido por niveles
+    private StringBuilder writeTree(BNode<E> nodoRaiz, StringBuilder resultado) {
+        if (nodoRaiz == null) {
+            return resultado;
+        }
 
-            //Construir string de claves
-            StringBuilder claves = new StringBuilder("(");
-            for (int i = 0; i < nodoActual.contadorClaves; i++) {
-                claves.append(nodoActual.getKey(i));
-                if (i < nodoActual.contadorClaves - 1) {
-                    claves.append(", ");
-                }
-            }
-            claves.append(")");
+        try {
+            //Colas para procesamiento por niveles
+            Cola<BNode<E>> colaNodos = new Cola<>();
+            Cola<BNode<E>> colaPadres = new Cola<>();
 
-            //Construir string del padre
-            String padreStr = (nodoPadre != null) ? "[" + nodoPadre.getIdNode() + "]" : "--";
+            colaNodos.enqueue(nodoRaiz);
+            colaPadres.enqueue(null);
 
-            //Construir string de hijos
-            StringBuilder hijos = new StringBuilder("[");
-            boolean hasChildren = false;
-            for (int i = 0; i <= nodoActual.contadorClaves; i++) {
-                if (nodoActual.getChild(i) != null) {
-                    if (hasChildren) {
-                        hijos.append(", ");
-                    }
-                    hijos.append(nodoActual.getChild(i).getIdNode());
-                    hasChildren = true;
-                }
-            }
-            if (!hasChildren) {
-                hijos.append("--");
-            }
-            hijos.append("]");
-
-            //Agregar fila a la tabla
+            //Encabezados de tabla
             resultado.append(String.format("%-10s %-15s %-10s %-15s%n",
-                    nodoActual.getIdNode(),
-                    claves.toString(),
-                    padreStr,
-                    hijos.toString()));
+                    "Id.Nodo", "Claves Nodo", "Id.Padre", "Id.Hijos"));
 
-            //Recursivamente procesar los hijos
-            for (int i = 0; i <= nodoActual.contadorClaves; i++) {
-                if (nodoActual.getChild(i) != null) {
-                    writeTree(nodoActual.getChild(i), nodoActual, resultado);
+            //Procesar todos los nodos nivel por nivel
+            while (!colaNodos.isEmpty()) {
+                BNode<E> nodoActual = colaNodos.dequeue();
+                BNode<E> nodoPadre = colaPadres.dequeue();
+
+                //Formatear claves del nodo
+                StringBuilder claves = new StringBuilder("(");
+                for (int i = 0; i < nodoActual.contadorClaves; i++) {
+                    claves.append(nodoActual.getKey(i));
+                    if (i < nodoActual.contadorClaves - 1) {
+                        claves.append(", ");
+                    }
                 }
+                claves.append(")");
+
+                //Formatear información del padre
+                String padreStr = (nodoPadre != null) ? "[" + nodoPadre.getIdNode() + "]" : "--";
+
+                //Formatear información de hijos y agregar a cola
+                StringBuilder hijos = new StringBuilder("[");
+                boolean conHijos = false;
+                for (int i = 0; i <= nodoActual.contadorClaves; i++) {
+                    if (nodoActual.getChild(i) != null) {
+                        if (conHijos) {
+                            hijos.append(", ");
+                        }
+                        hijos.append(nodoActual.getChild(i).getIdNode());
+                        conHijos = true;
+
+                        //Agregar hijo para procesamiento posterior
+                        colaNodos.enqueue(nodoActual.getChild(i));
+                        colaPadres.enqueue(nodoActual);
+                    }
+                }
+                if (!conHijos) {
+                    hijos.append("--");
+                }
+                hijos.append("]");
+
+                //Agregar fila formateada a la tabla
+                resultado.append(String.format("%-10s %-15s %-10s %-15s%n",
+                        nodoActual.getIdNode(),
+                        claves.toString(),
+                        padreStr,
+                        hijos.toString()));
             }
+        } catch (MensajeException e) {
+            resultado.append("Error al procesar el árbol: ").append(e.getMessage());
         }
 
         return resultado;
