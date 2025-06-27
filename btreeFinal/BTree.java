@@ -17,6 +17,15 @@ public class BTree<E extends Comparable<E>> {
         minimoClaves = (int) Math.ceil(orden / 2.0) - 1;
     }
 
+    public int minimoClaves(int orden){
+        if (orden%2 == 0) { //es par
+            return (int) Math.ceil(orden / 2.0);
+        }
+        else{
+            return (int) Math.ceil(orden / 2.0) - 1;
+        }
+    }
+
     public boolean isEmpty() {
         return this.raiz == null;
     }
@@ -298,24 +307,24 @@ public class BTree<E extends Comparable<E>> {
 
         //Intentar préstamo de hermano derecho
         if (hermanoDerecho != null && hermanoDerecho.contadorClaves > minimoClaves) {
-            borrowFromRight(nodoPadre, indiceHijo);
+            borrowRight(nodoPadre, indiceHijo);
         }
         //Intentar préstamo de hermano izquierdo
         else if (hermanoIzquierdo != null && hermanoIzquierdo.contadorClaves > minimoClaves) {
-            borrowFromLeft(nodoPadre, indiceHijo);
+            borrowLeft(nodoPadre, indiceHijo);
         }
         //Fusionar con hermano disponible
         else {
             if (hermanoDerecho != null) {
-                mergeWithRight(nodoPadre, indiceHijo);
+                mergeRight(nodoPadre, indiceHijo);
             } else if (hermanoIzquierdo != null) {
-                mergeWithLeft(nodoPadre, indiceHijo);
+                mergeLeft(nodoPadre, indiceHijo);
             }
         }
     }
 
     //Toma clave prestada del hermano derecho
-    private void borrowFromRight(BNode<E> nodoPadre, int indiceHijo) {
+    private void borrowRight(BNode<E> nodoPadre, int indiceHijo) {
         BNode<E> hijoDesbalanceado = nodoPadre.getChild(indiceHijo);
         BNode<E> hermanoDerecho = nodoPadre.getChild(indiceHijo + 1);
 
@@ -341,7 +350,7 @@ public class BTree<E extends Comparable<E>> {
     }
 
     //Toma clave prestada del hermano izquierdo
-    private void borrowFromLeft(BNode<E> nodoPadre, int indiceHijo) {
+    private void borrowLeft(BNode<E> nodoPadre, int indiceHijo) {
         BNode<E> hijoDesbalanceado = nodoPadre.getChild(indiceHijo);
         BNode<E> hermanoIzquierdo = nodoPadre.getChild(indiceHijo - 1);
 
@@ -378,7 +387,7 @@ public class BTree<E extends Comparable<E>> {
         hermanoIzquierdo.setChild(hermanoIzquierdo.contadorClaves + 1, null);
     }
 
-    private void mergeWithRight(BNode<E> nodoPadre, int indiceHijo) {
+    private void mergeRight(BNode<E> nodoPadre, int indiceHijo) {
         BNode<E> hijoIzquierdo = nodoPadre.getChild(indiceHijo);
         BNode<E> hijoDerecho = nodoPadre.getChild(indiceHijo + 1);
         E clavePadre = nodoPadre.getKey(indiceHijo);
@@ -392,7 +401,7 @@ public class BTree<E extends Comparable<E>> {
         }
     }
 
-    private void mergeWithLeft(BNode<E> nodoPadre, int indiceHijo) {
+    private void mergeLeft(BNode<E> nodoPadre, int indiceHijo) {
         BNode<E> hermanoIzquierdo = nodoPadre.getChild(indiceHijo - 1);
         BNode<E> hijoDesbalanceado = nodoPadre.getChild(indiceHijo);
         E clavePadre = nodoPadre.getKey(indiceHijo - 1);
