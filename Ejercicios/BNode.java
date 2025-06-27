@@ -2,7 +2,6 @@ package Ejercicios;
 
 import java.util.ArrayList;
 
-//Nodo de un árbol B genérico que maneja elementos comparables
 public class BNode<E extends Comparable<E>> {
     protected ArrayList<E> claves;
     protected ArrayList<BNode<E>> hijos;
