@@ -13,8 +13,8 @@ public class BNode<E extends Comparable<E>> {
 
     //Constructor que inicializa un nodo con el orden del arbol
     public BNode(int orden) {
-        this.claves = new ArrayList<>();
-        this.hijos = new ArrayList<>();
+        this.claves = new ArrayList<>(orden-1);
+        this.hijos = new ArrayList<>(orden);
         //Inicializa las listas con valores null según el orden
         for (int i = 0; i < orden; i++) this.claves.add(null);
         for (int i = 0; i <= orden; i++) this.hijos.add(null);
