@@ -49,7 +49,7 @@ public class BNode<E extends Comparable<E>> {
 
         while (pos[0] < contadorClaves) {
             E actual = claves.get(pos[0]);
-            if (actual == null) break; // 👉 Evita null
+            if (actual == null) break;
 
             int cmp = clave.compareTo(actual);
             if (cmp == 0) {
