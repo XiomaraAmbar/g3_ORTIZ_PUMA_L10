@@ -9,8 +9,8 @@ public class BNode<E extends Comparable<E>> {
 
     //Inicializa nodo con capacidad según orden del árbol
     public BNode(int orden) {
-        this.claves = new ArrayList<E>(orden);
-        this.hijos = new ArrayList<BNode<E>>(orden + 1); //Los hijos son orden + 1
+        this.claves = new ArrayList<E>(orden-1);
+        this.hijos = new ArrayList<BNode<E>>(orden);
         this.contadorClaves = 0;
         this.idNodo = 0;
 
